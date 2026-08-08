@@ -28,7 +28,12 @@ function M.apply_colorscheme_with_cache(global_colors_name)
 	-- For randombones, we should cache individual colorscheme with their real name
 	-- but use options from prefix "randombones"
 	local opts = require("zenbones.specs").get_global_config(global_colors_name, vim.o.background)
-	local colors_name = vim.g.randombones_colors_name or global_colors_name
+	local colors_name
+	if global_colors_name == "randombones" then
+		colors_name = vim.g.randombones_colors_name
+	else
+		colors_name = global_colors_name
+	end
 	local inputs = {
 		version = M.version,
 		opts = opts,
