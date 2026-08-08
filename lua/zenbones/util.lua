@@ -34,7 +34,7 @@ function M.apply_colorscheme_with_cache(global_colors_name)
 		opts = opts,
 	}
 
-	local cache = M.cache.load(colors_name)
+	local cache = M.cache.load(colors_name, vim.o.background)
 
 	local colors, palette
 	if cache and vim.deep_equal(inputs, cache.inputs) then
@@ -43,7 +43,7 @@ function M.apply_colorscheme_with_cache(global_colors_name)
 	else
 		colors = M.compile_colorscheme(colors_name, opts)
 		palette = M.compile_palette(colors_name, vim.o.background)
-		local ok, msg = M.cache.write(colors_name, {
+		local ok, msg = M.cache.write(colors_name, vim.o.background, {
 			inputs = inputs,
 			colors = colors,
 			palette = palette,
@@ -63,6 +63,7 @@ function M.apply_colorscheme_with_cache(global_colors_name)
 end
 
 function M.compile_colorscheme(colors_name)
+	package.loaded[colors_name] = nil
 	local spec = require(colors_name)
 	return require("lush.compiler")(spec)
 end
@@ -74,13 +75,13 @@ end
 
 M.cache = {}
 
-function M.cache.file(colors_name)
-	return vim.fn.stdpath("cache") .. "/" .. colors_name .. ".msgpack"
+function M.cache.file(colors_name, background)
+	return vim.fn.stdpath("cache") .. "/" .. colors_name .. "_" .. background .. ".msgpack"
 end
 
-function M.cache.load(colors_name)
+function M.cache.load(colors_name, background)
 	local ok, cache = pcall(function()
-		local file = io.open(M.cache.file(colors_name), "rb")
+		local file = io.open(M.cache.file(colors_name, background), "rb")
 		local content = file:read("*a")
 		file:close()
 		return vim.mpack.decode(content)
@@ -89,9 +90,9 @@ function M.cache.load(colors_name)
 	return ok and cache or nil
 end
 
-function M.cache.write(colors_name, cache)
+function M.cache.write(colors_name, background, cache)
 	return pcall(function()
-		local file, msg = io.open(M.cache.file(colors_name), "wb+")
+		local file, msg = io.open(M.cache.file(colors_name, background), "wb+")
 		if not file then
 			error(msg)
 		end
@@ -102,8 +103,8 @@ end
 
 function M.cache.clear()
 	for _, colorscheme in ipairs(M.get_colorscheme_list()) do
-		local path = M.cache.file(colorscheme.name)
-		vim.uv.fs_unlink(path)
+		vim.uv.fs_unlink(M.cache.file(colorscheme.name, "dark"))
+		vim.uv.fs_unlink(M.cache.file(colorscheme.name, "light"))
 	end
 end
 
